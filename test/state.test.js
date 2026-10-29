@@ -58,3 +58,75 @@ describe('entering the key (#3)', () => {
     assert.equal(reduce(state, key('x')).error, null);
   });
 });
+
+describe('validation (#16)', () => {
+  test('empty message shows an error and does not encrypt', () => {
+    const s = run(key('LEMON'), ENCRYPT);
+    assert.equal(s.error, ERRORS.EMPTY_MESSAGE);
+    assert.equal(s.result, '');
+  });
+
+  test('whitespace-only message counts as empty', () => {
+    assert.equal(run(msg('  \n '), key('LEMON'), ENCRYPT).error, ERRORS.EMPTY_MESSAGE);
+  });
+
+  test('empty key shows an error', () => {
+    assert.equal(run(msg('hi'), ENCRYPT).error, ERRORS.EMPTY_KEY);
+  });
+
+  test('key with non-letters shows an error', () => {
+    for (const k of ['le mon', 'key1', 'ké']) {
+      assert.equal(run(msg('hi'), key(k), ENCRYPT).error, ERRORS.INVALID_KEY, k);
+    }
+  });
+
+  test('error messages are human readable', () => {
+    assert.equal(ERRORS.EMPTY_MESSAGE, 'Please enter a message to encrypt.');
+    assert.equal(ERRORS.EMPTY_KEY, 'Please enter an encryption key.');
+    assert.equal(ERRORS.INVALID_KEY, 'Key must contain letters only (A–Z).');
+  });
+
+  test('a valid encrypt clears a previous error', () => {
+    const s = run(msg('hi'), ENCRYPT);
+    assert.equal(reduce(reduce(s, key('LEMON')), ENCRYPT).error, null);
+    const withError = { ...run(msg('hi'), key('LEMON')), error: 'old' };
+    assert.equal(reduce(withError, ENCRYPT).error, null);
+  });
+});
+
+describe('Decrypt disabled until encrypted (#4)', () => {
+  test('stays disabled while typing', () => {
+    assert.equal(run(msg('hi'), key('LEMON')).decryptEnabled, false);
+  });
+
+  test('stays disabled after a failed encrypt', () => {
+    assert.equal(run(msg('hi'), key('bad key'), ENCRYPT).decryptEnabled, false);
+  });
+
+  test('DECRYPT while disabled is a no-op', () => {
+    const s = run(msg('hi'), key('LEMON'));
+    assert.equal(reduce(s, DECRYPT), s);
+  });
+});
+
+describe('Encrypt (#5) and result display (#6)', () => {
+  test('encrypts the reference vector into the result', () => {
+    assert.equal(run(msg('ATTACKATDAWN'), key('LEMON'), ENCRYPT).result, 'LXFOPVEFRNHR');
+  });
+
+  test('preserves case, spaces and punctuation in the result', () => {
+    assert.equal(run(msg('Attack at dawn!'), key('LEMON'), ENCRYPT).result, 'Lxfopv ef rnhr!');
+  });
+
+  test('captures the original plain text and sets phase', () => {
+    const s = run(msg('Attack at dawn!'), key('LEMON'), ENCRYPT);
+    assert.equal(s.original, 'Attack at dawn!');
+    assert.equal(s.phase, 'encrypted');
+  });
+
+  test('encrypting again uses the current message and key', () => {
+    const s = run(msg('abc'), key('B'), ENCRYPT, msg('xyz'), key('C'), ENCRYPT);
+    assert.equal(s.result, 'zab');
+    assert.equal(s.original, 'xyz');
+  });
+});
