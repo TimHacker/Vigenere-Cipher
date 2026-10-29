@@ -69,3 +69,47 @@ Copilot asked clarifying questions one at a time, offering a recommended option 
 - The "no libraries" constraint shaped the testing architecture.
 
 <!-- Add new entries below as each ticket is completed. -->
+
+## 4. Building it test-first
+
+Every behaviour was built red → green. The git history shows a `test: … (red)` commit before each `feat: … (green)` commit. Run `git log --oneline` during the demo to show this.
+
+| Step | Issues | Red (failing tests) | Green |
+|------|--------|---------------------|-------|
+| Scaffolding + `node --test` harness | #11 | smoke test | `package.json`, skeleton files |
+| CI (GitHub Actions) | #15 | — | `ci.yml` runs `npm test` on push/PR |
+| Cipher core | #13 | 15 tests, incl. `ATTACKATDAWN`/`LEMON` → `LXFOPVEFRNHR` and round-trip property | `src/vigenere.js` |
+| Reducer skeleton | #14 | initial state, immutability, unknown action | `src/state.js` |
+| Message & key input | #2, #3 | 5 tests | `MESSAGE_CHANGED`, `KEY_CHANGED` |
+| Validation, Encrypt, result | #4, #5, #6, #16 | 13 tests | `ENCRYPT` + `validate()` |
+| Enable Decrypt, Decrypt | #7, #8 | 7 tests | `DECRYPT`, `invalidate` on edit |
+| Compare (bonus) | #9, #10 | 7 tests | `COMPARE` + first-difference error |
+| App window + DOM adapter | #1 | manual browser check | `index.html`, `styles.css`, `src/app.js` |
+| GitHub Pages | #17 | — | `pages.yml` reuses CI, deploys only if tests pass |
+| Reflection | #18 | — | [`REFLECTION.md`](../REFLECTION.md) |
+
+**Result:** 51 unit tests, no dependencies, about 90 lines of reducer and 50 lines of cipher code.
+
+### Observations worth sharing
+
+- **Some "red" tests passed immediately.** For example, "Decrypt stays disabled while typing" passed against the skeleton, because the default was already correct. These are still worth keeping as regression tests, and they're an honest TDD talking point.
+- **Writing tests first drove the API design.** The tests used `run(...actions)` to replay user journeys. That made the reducer feel like a script of what the user does.
+- **The test for #10 was the tricky one.** A correct cipher always round-trips, so the "mismatch" path can't happen through the UI. The test builds a tampered state directly. This is only possible because the state is a plain object.
+- **Decision made during the build:** the Compare error reports the *first differing character position*, e.g. "Messages differ at character 12." This was optional in #10, and the test pinned it down.
+- **Decision made during the build:** after editing an input, the old result stays visible but Decrypt and Compare are reset (ADR 0007). Clearing the result was considered but rejected: seeing the old ciphertext while changing the key is useful.
+- **Encrypt is a form `submit` button**, so pressing Enter in the key field encrypts. This came for free with semantic HTML.
+- **Accessibility:**
+  - labels on every field
+  - `role="alert"` for errors
+  - `aria-live` result region
+  - `aria-invalid` on the offending field
+  - native `disabled`/`hidden` attributes
+  - visible focus ring
+- **Security hygiene:** all output is rendered with `textContent`, never `innerHTML`.
+- **Verification:** the app was checked in Copilot's built-in browser canvas. The checks covered the empty-message error, Encrypt → `Lxfopv ef rnhr!`, Decrypt, Compare ✅, editing the key disabling Decrypt and hiding Compare, and the invalid-key error.
+
+## 5. Live
+
+- App: https://timhacker.github.io/Vigenere-Cipher/
+- Every push to `main` runs CI. The Pages workflow re-runs the tests and only deploys if they pass (ADR 0006).
+
