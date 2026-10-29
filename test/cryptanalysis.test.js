@@ -93,6 +93,18 @@ describe('crack (#19)', () => {
     });
   }
 
+  test('recovers a 1-letter (Caesar) key instead of a noisy long length', () => {
+    const result = crack(encrypt(PARAGRAPH.slice(0, 330), 'H'));
+    assert.equal(result.keyLength, 1);
+    assert.equal(result.key, 'H');
+  });
+
+  test('prefers the true length over its multiples for a short message', () => {
+    const result = crack(encrypt(PARAGRAPH.slice(0, 100), 'KEY'));
+    assert.equal(result.keyLength, 3);
+    assert.equal(result.key, 'KEY');
+  });
+
   test('returns the top candidate key lengths with their IoC, best first', () => {
     const { candidates } = crack(encrypt(PARAGRAPH, 'LEMON'));
     assert.equal(candidates.length, 3);
