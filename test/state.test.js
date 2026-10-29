@@ -30,3 +30,31 @@ describe('reducer basics (#14, #1)', () => {
     assert.equal(reduce(initialState, { type: 'NOPE' }), initialState);
   });
 });
+
+describe('entering the message (#2)', () => {
+  test('stores the message', () => {
+    assert.equal(run(msg('Hello')).message, 'Hello');
+  });
+
+  test('stores multi-line text, punctuation and Unicode unchanged', () => {
+    const text = 'Line 1\nLine 2 — café ☕!';
+    assert.equal(run(msg(text)).message, text);
+  });
+
+  test('clears any error', () => {
+    const state = { ...initialState, error: 'boom' };
+    assert.equal(reduce(state, msg('x')).error, null);
+  });
+});
+
+describe('entering the key (#3)', () => {
+  test('stores the key exactly as typed', () => {
+    assert.equal(run(key('LEMON')).key, 'LEMON');
+    assert.equal(run(key('le mon1')).key, 'le mon1');
+  });
+
+  test('clears any error', () => {
+    const state = { ...initialState, error: 'boom' };
+    assert.equal(reduce(state, key('x')).error, null);
+  });
+});
