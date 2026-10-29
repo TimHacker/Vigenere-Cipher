@@ -176,3 +176,49 @@ describe('Decrypt (#8)', () => {
     assert.equal(reduce(s, DECRYPT), s);
   });
 });
+
+describe('Compare button (#9)', () => {
+  test('is hidden initially and after encrypt', () => {
+    assert.equal(initialState.compareVisible, false);
+    assert.equal(run(msg('hi'), key('LEMON'), ENCRYPT).compareVisible, false);
+  });
+
+  test('is visible after decrypt', () => {
+    assert.equal(run(msg('hi'), key('LEMON'), ENCRYPT, DECRYPT).compareVisible, true);
+  });
+
+  test('reports a match when the decrypted text equals the original', () => {
+    const s = run(msg('Attack at dawn!'), key('LEMON'), ENCRYPT, DECRYPT, COMPARE);
+    assert.equal(s.compareResult, 'match');
+    assert.equal(s.error, null);
+  });
+
+  test('COMPARE while hidden is a no-op', () => {
+    const s = run(msg('hi'), key('LEMON'), ENCRYPT);
+    assert.equal(reduce(s, COMPARE), s);
+  });
+});
+
+describe('Compare mismatch error (#10)', () => {
+  const decrypted = run(msg('Attack at dawn!'), key('LEMON'), ENCRYPT, DECRYPT);
+  const tampered = { ...decrypted, result: 'Attack at dusk!' };
+
+  test('reports a mismatch with an error naming the first differing position', () => {
+    const s = reduce(tampered, COMPARE);
+    assert.equal(s.compareResult, 'mismatch');
+    assert.equal(s.error, 'Messages differ at character 12.');
+  });
+
+  test('reports a length difference', () => {
+    const s = reduce({ ...decrypted, result: 'Attack at dawn' }, COMPARE);
+    assert.equal(s.compareResult, 'mismatch');
+    assert.equal(s.error, 'Messages differ at character 15.');
+  });
+
+  test('a later successful compare clears the error', () => {
+    const mismatched = reduce(tampered, COMPARE);
+    const fixed = reduce({ ...mismatched, result: decrypted.result }, COMPARE);
+    assert.equal(fixed.compareResult, 'match');
+    assert.equal(fixed.error, null);
+  });
+});
