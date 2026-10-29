@@ -15,7 +15,10 @@ export const initialState = Object.freeze({
   error: null,
 });
 
-const handlers = {};
+const handlers = {
+  MESSAGE_CHANGED: (state, { message }) => ({ ...state, message, error: null }),
+  KEY_CHANGED: (state, { key }) => ({ ...state, key, error: null }),
+};
 
 export function reduce(state, action) {
   const handler = handlers[action.type];
