@@ -2,12 +2,14 @@
 // unit tested without a DOM. State rules are described in ADR 0007.
 
 import { encrypt, decrypt, isValidKey } from './vigenere.js';
+import { crack } from './cryptanalysis.js';
 
 export const ERRORS = Object.freeze({
   EMPTY_MESSAGE: 'Please enter a message to encrypt.',
   EMPTY_KEY: 'Please enter an encryption key.',
   INVALID_KEY: 'Key must contain letters only (A–Z).',
   MISMATCH: (position) => `Messages differ at character ${position}.`,
+  EMPTY_CIPHERTEXT: 'Please enter a ciphertext to crack.',
 });
 
 function firstDifference(a, b) {
@@ -28,6 +30,9 @@ export const initialState = Object.freeze({
   compareVisible: false,
   compareResult: null,
   error: null,
+  ciphertext: '',
+  cracked: null,
+  crackError: null,
 });
 
 function validate({ message, key }) {
@@ -44,6 +49,9 @@ const invalidate = {
   compareVisible: false,
   compareResult: null,
 };
+
+// The Crack it panel has its own state and never touches Encrypt/Decrypt (ADR 0008).
+const clearCrack = { cracked: null, crackError: null };
 
 const handlers = {
   MESSAGE_CHANGED: (state, { message }) => ({ ...state, message, ...invalidate }),
@@ -80,6 +88,20 @@ const handlers = {
     const index = firstDifference(state.original, state.result);
     if (index === -1) return { ...state, compareResult: 'match', error: null };
     return { ...state, compareResult: 'mismatch', error: ERRORS.MISMATCH(index + 1) };
+  },
+
+  CIPHERTEXT_CHANGED: (state, { ciphertext }) => ({ ...state, ciphertext, ...clearCrack }),
+
+  USE_ENCRYPTED_RESULT: (state) => {
+    if (state.phase !== 'encrypted') return state;
+    return { ...state, ciphertext: state.result, ...clearCrack };
+  },
+
+  CRACK: (state) => {
+    if (state.ciphertext.trim() === '') return { ...state, cracked: null, crackError: ERRORS.EMPTY_CIPHERTEXT };
+    const { ok, error, keyLength, key, plaintext, candidates } = crack(state.ciphertext);
+    if (!ok) return { ...state, cracked: null, crackError: error };
+    return { ...state, cracked: { keyLength, key, plaintext, candidates }, crackError: null };
   },
 };
 
