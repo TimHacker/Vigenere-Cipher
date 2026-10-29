@@ -7,7 +7,8 @@ const ALPHABET_SIZE = 26;
 const UPPER_A = 65;
 const MIN_LETTERS = 40;
 const MIN_LETTERS_PER_COLUMN = 8;
-const IOC_TOLERANCE = 0.9;
+const RELIABLE_LETTERS_PER_COLUMN = 20;
+const IOC_TOLERANCE = 0.85;
 
 export const NOT_ENOUGH_TEXT = 'Not enough text to crack. Paste at least 40 letters of ciphertext.';
 
@@ -62,11 +63,14 @@ function rankKeyLengths(clean, maxLen) {
   }
   if (candidates.length === 0) return [];
 
-  // Multiples of the true length score as well as the length itself, so pick
-  // among the near-best: most Kasiski distances it divides, then shortest.
+  // Short columns give noisy, inflated IoC, so measure "best" only on lengths
+  // with enough letters per column. Multiples of the true length score as
+  // well as the length itself, so every near-best length is a contender:
+  // prefer the one dividing the most Kasiski distances, then the shortest.
+  const reliable = candidates.filter((c) => clean.length / c.length >= RELIABLE_LETTERS_PER_COLUMN);
+  const best = Math.max(...(reliable.length ? reliable : candidates).map((c) => c.ioc));
   const distances = kasiskiDistances(clean);
   const kasiski = (length) => distances.filter((d) => d % length === 0).length;
-  const best = Math.max(...candidates.map((c) => c.ioc));
   const [chosen] = candidates
     .filter((c) => c.ioc >= best * IOC_TOLERANCE)
     .sort((a, b) => kasiski(b.length) - kasiski(a.length) || a.length - b.length);
