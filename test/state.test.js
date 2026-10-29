@@ -1,6 +1,8 @@
 import { describe, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { initialState, reduce, ERRORS } from '../src/state.js';
+import { encrypt } from '../src/vigenere.js';
+import { NOT_ENOUGH_TEXT } from '../src/cryptanalysis.js';
 
 const run = (...actions) => actions.reduce(reduce, initialState);
 const msg = (message) => ({ type: 'MESSAGE_CHANGED', message });
@@ -220,5 +222,81 @@ describe('Compare mismatch error (#10)', () => {
     const fixed = reduce({ ...mismatched, result: decrypted.result }, COMPARE);
     assert.equal(fixed.compareResult, 'match');
     assert.equal(fixed.error, null);
+  });
+});
+
+describe('Crack it panel (#19)', () => {
+  const PLAIN =
+    'When the same word lines up with the same part of the key, it produces the same ' +
+    'ciphertext, and the gaps between those repeats reveal the length of the key. Once the ' +
+    'length is known, every column of letters is just a simple shift, and the familiar shape ' +
+    'of English gives the whole secret away in a few minutes of patient counting.';
+  const cipher = (ciphertext) => ({ type: 'CIPHERTEXT_CHANGED', ciphertext });
+  const CRACK = { type: 'CRACK' };
+  const USE_ENCRYPTED_RESULT = { type: 'USE_ENCRYPTED_RESULT' };
+
+  test('initial state has an empty crack panel', () => {
+    assert.equal(initialState.ciphertext, '');
+    assert.equal(initialState.cracked, null);
+    assert.equal(initialState.crackError, null);
+  });
+
+  test('stores the ciphertext exactly as typed', () => {
+    assert.equal(run(cipher('Lxfopv ef rnhr!')).ciphertext, 'Lxfopv ef rnhr!');
+  });
+
+  test('cracks the key length, key and plain text without being given the key', () => {
+    const s = run(cipher(encrypt(PLAIN, 'LEMON')), CRACK);
+    assert.equal(s.crackError, null);
+    assert.equal(s.cracked.keyLength, 5);
+    assert.equal(s.cracked.key, 'LEMON');
+    assert.equal(s.cracked.plaintext, PLAIN);
+    assert.equal(s.cracked.candidates[0].length, 5);
+  });
+
+  test('empty ciphertext shows an error', () => {
+    const s = run(cipher('  '), CRACK);
+    assert.equal(s.crackError, ERRORS.EMPTY_CIPHERTEXT);
+    assert.equal(s.cracked, null);
+    assert.equal(ERRORS.EMPTY_CIPHERTEXT, 'Please enter a ciphertext to crack.');
+  });
+
+  test('short ciphertext shows a "not enough text" error', () => {
+    const s = run(cipher('Lxfopv ef rnhr!'), CRACK);
+    assert.equal(s.crackError, NOT_ENOUGH_TEXT);
+    assert.equal(s.cracked, null);
+  });
+
+  test('editing the ciphertext clears the previous crack and error', () => {
+    const cracked = run(cipher(encrypt(PLAIN, 'LEMON')), CRACK);
+    assert.equal(reduce(cracked, cipher('x')).cracked, null);
+    const failed = run(cipher('x'), CRACK);
+    assert.equal(reduce(failed, cipher('xy')).crackError, null);
+  });
+
+  test('cracking does not touch the encrypt/decrypt state', () => {
+    const encrypted = run(msg('Attack at dawn!'), key('LEMON'), ENCRYPT);
+    const s = reduce(reduce(encrypted, cipher(encrypt(PLAIN, 'KEY'))), CRACK);
+    assert.equal(s.result, encrypted.result);
+    assert.equal(s.decryptEnabled, true);
+    assert.equal(s.error, null);
+  });
+
+  test('"Use encrypted result" copies the encrypted result into the crack input', () => {
+    const s = run(msg(PLAIN), key('LEMON'), ENCRYPT, USE_ENCRYPTED_RESULT);
+    assert.equal(s.ciphertext, encrypt(PLAIN, 'LEMON'));
+    assert.equal(reduce(s, CRACK).cracked.key, 'LEMON');
+  });
+
+  test('"Use encrypted result" clears a previous crack', () => {
+    const s = run(cipher('x'), CRACK, msg(PLAIN), key('KEY'), ENCRYPT, USE_ENCRYPTED_RESULT);
+    assert.equal(s.crackError, null);
+    assert.equal(s.cracked, null);
+  });
+
+  test('"Use encrypted result" is a no-op unless the result is encrypted', () => {
+    assert.equal(reduce(initialState, USE_ENCRYPTED_RESULT), initialState);
+    const decrypted = run(msg('hi'), key('LEMON'), ENCRYPT, DECRYPT);
+    assert.equal(reduce(decrypted, USE_ENCRYPTED_RESULT), decrypted);
   });
 });
