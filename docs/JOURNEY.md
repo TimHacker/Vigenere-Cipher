@@ -113,3 +113,44 @@ Every behaviour was built red → green. The git history shows a `test: … (red
 - App: https://timhacker.github.io/Vigenere-Cipher/
 - Every push to `main` runs CI. The Pages workflow re-runs the tests and only deploys if they pass (ADR 0006).
 
+
+## 6. Stretch feature: Crack it (#19)
+
+**Prompt:** "What's the next feature? Spin up a new conversation to implement this." The coordinator chat picked #19 and started a new Copilot session for it, with the project conventions (TDD, ADRs, this log) passed along in the kickoff prompt.
+
+**Goal:** paste a ciphertext and recover the key and plain text *without the key*. This proves the answers in [`REFLECTION.md`](../REFLECTION.md).
+
+### Steps (red → green)
+
+| Step | Red (failing tests) | Green |
+|------|---------------------|-------|
+| Cryptanalysis core | 18 tests: IoC ≈ 0.066 for English and ≈ 0.038 for even text, Kasiski distances, Caesar `crackShift`, key length 5 for `LEMON`, keys of 3–8 letters, "not enough text" | `src/cryptanalysis.js` |
+| Edge cases found by probing | Caesar key (length 1), short `KEY` message | Better key-length selection (below) |
+| Reducer | 10 tests: `CIPHERTEXT_CHANGED`, `CRACK`, `USE_ENCRYPTED_RESULT`, errors, isolation from Encrypt/Decrypt | `src/state.js` |
+| UI | browser check | "Crack it" section in `index.html`, `renderCrack()` in `app.js` |
+
+**Result:** 81 unit tests (30 new), still no dependencies. The cracker is about 120 lines.
+
+### Key decisions ([ADR 0008](adr/0008-cryptanalysis-approach.md))
+
+- **IoC picks the key length, Kasiski breaks ties, chi-squared picks each letter.**
+- **Analyse letters only, but decrypt with the existing `decrypt()`.** The recovered text keeps case and punctuation for free.
+- **Short text returns a result, not an exception.** Fewer than 40 letters gives "Not enough text to crack".
+- **Separate state for the panel.** Cracking never changes the Encrypt/Decrypt state. Editing the ciphertext clears the old crack, so a stale key is never shown.
+- **"Use encrypted result"** is only enabled straight after Encrypt. That is the only time the result is ciphertext.
+
+### Observations worth sharing
+
+- **All the first tests passed on the first implementation, and that wasn't the end.** Probing beyond the tests showed a Caesar key was cracked as length **17**. Short columns (~15 letters) give noisy, inflated IoC. That became a new red test before the fix.
+- **The first fix broke a passing test.** It added a "looks like English" IoC floor. Then `SECRET` cracked as `SEG`: its two Es make length 3 look partly English, and Kasiski can't tell 3 from 6. The existing test caught the regression straight away, which is why the earlier tests matter.
+- **Tuning with data, not guesses.** Copilot wrote a throwaway script to score several selection rules over 300–400 random keys and text lengths, then picked the rule with the best results. The accuracy table is in ADR 0008: 87% at 200 characters, 99% at 500.
+- **The candidate table is a demo prop.** For `LEMON`, length 10 can have a *higher* IoC than 5. The table shows it, and the explanation is that Kasiski and "shortest wins" pick 5.
+- **Browser canvas quirk:** the canvas's type/click actions didn't fire DOM `input` events on this page. Verification used real DOM events through a script instead. It checked Encrypt → Use encrypted result → Crack (`LEMON`, exact plain text), the short-text error, editing clearing the result, and Decrypt still working.
+
+### Demo talking points
+
+1. Encrypt a paragraph with a secret key, click **Use encrypted result**, then **Crack**. The key and text appear in milliseconds.
+2. Point at the candidate table: why 10 and 20 also score well, and how Kasiski picks 5.
+3. Paste "Lxfopv ef rnhr!": not enough text. Statistics need volume, which is also why short secrets *feel* safe.
+4. `git log --oneline`: two red/green cycles for the core, the second driven by probing rather than the original test list.
+5. Link back to REFLECTION question 1: "Would I trust this with financial data?" The demo answers it.

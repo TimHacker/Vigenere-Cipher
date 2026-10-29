@@ -9,5 +9,6 @@
 | [0005](0005-tdd-with-node-test-and-state-reducer.md) | TDD with node:test and a pure state reducer | Accepted |
 | [0006](0006-ci-and-github-pages.md) | CI with GitHub Actions and hosting on GitHub Pages | Accepted |
 | [0007](0007-ui-state-rules.md) | UI state rules for Decrypt and Compare | Accepted |
+| [0008](0008-cryptanalysis-approach.md) | Cryptanalysis approach for "Crack it" | Accepted |
 
 New ADRs: copy [`0000-template.md`](0000-template.md).

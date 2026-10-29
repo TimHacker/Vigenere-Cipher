@@ -27,6 +27,8 @@ Financial data should use a vetted, modern implementation such as the Web Crypto
 
 ## 3. How would I go about trying to crack this encryption?
 
+> **Try it:** the app's **Crack it** panel implements steps 1–3 below. See [ADR 0008](docs/adr/0008-cryptanalysis-approach.md) and issue #19.
+
 1. **Find the key length.**
    - **Kasiski examination:** find repeated ciphertext sequences of 3 or more letters and record the distances between them. The key length is very likely a common factor of those distances.
    - **Friedman test / IoC:** for each candidate length *n* (for example 1–20), split the ciphertext into *n* columns and compute the average IoC. The *n* where it jumps to ≈ 0.066 is the key length.
