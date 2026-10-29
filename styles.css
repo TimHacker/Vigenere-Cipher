@@ -74,6 +74,24 @@ button:disabled { background: #b7bdcc; cursor: not-allowed; }
 .error { color: var(--error); font-weight: 600; min-height: 1.5em; margin: 0 0 0.5rem; }
 .success { color: var(--success); font-weight: 600; margin: 0 0 0.5rem; }
 
+.crack { margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid var(--border); }
+.crack h2 { margin-top: 0; }
+button.secondary { background: var(--muted); }
+
+.crack-summary {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 0.35rem 1rem;
+  margin: 0 0 1rem;
+}
+.crack-summary dt { font-weight: 600; }
+.crack-summary dd { margin: 0; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+
+.candidates { border-collapse: collapse; width: 100%; }
+.candidates caption { text-align: left; font-weight: 600; margin-bottom: 0.35rem; }
+.candidates th, .candidates td { text-align: left; padding: 0.35rem 0.75rem; border-bottom: 1px solid var(--border); }
+.candidates td { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+
 @media (max-width: 480px) {
   .app { padding: 1.25rem; }
   .actions button { flex: 1; }

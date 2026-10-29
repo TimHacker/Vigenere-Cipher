@@ -38,6 +38,43 @@
       <label for="result" id="result-label">Result</label>
       <output id="result" for="message key" aria-live="polite"></output>
     </div>
+
+    <section class="crack" aria-labelledby="crack-heading">
+      <h2 id="crack-heading">Crack it</h2>
+      <p class="intro">Paste a Vigenère ciphertext. The app guesses the key length
+        (index of coincidence + Kasiski), then each key letter (English letter frequencies),
+        without being told the key. Works best with 200+ letters.</p>
+
+      <form id="crack-form" novalidate>
+        <div class="field">
+          <label for="ciphertext">Ciphertext</label>
+          <textarea id="ciphertext" rows="5" aria-describedby="crack-error"></textarea>
+        </div>
+
+        <div class="actions">
+          <button id="crack" type="submit">Crack</button>
+          <button id="use-encrypted" type="button" class="secondary" disabled>Use encrypted result</button>
+        </div>
+      </form>
+
+      <p id="crack-error" class="error" role="alert"></p>
+
+      <div id="crack-results" aria-live="polite" hidden>
+        <dl class="crack-summary">
+          <dt>Guessed key length</dt><dd id="crack-key-length"></dd>
+          <dt>Recovered key</dt><dd id="crack-key"></dd>
+        </dl>
+        <div class="field">
+          <label for="crack-plaintext">Recovered plain text</label>
+          <output id="crack-plaintext" for="ciphertext"></output>
+        </div>
+        <table class="candidates">
+          <caption>Top candidate key lengths</caption>
+          <thead><tr><th scope="col">Key length</th><th scope="col">Average column IoC</th></tr></thead>
+          <tbody id="crack-candidates"></tbody>
+        </table>
+      </div>
+    </section>
   </main>
   <script type="module" src="src/app.js"></script>
 </body>
