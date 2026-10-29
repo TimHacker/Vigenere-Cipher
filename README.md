@@ -1,5 +1,7 @@
 # Vigenère Cipher
 
+[![CI](https://github.com/TimHacker/Vigenere-Cipher/actions/workflows/ci.yml/badge.svg)](https://github.com/TimHacker/Vigenere-Cipher/actions/workflows/ci.yml)
+
 A simple app to encrypt and decrypt messages using a hand-written Vigenère Cipher (no libraries).
 
 ## Run locally
