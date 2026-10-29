@@ -130,3 +130,49 @@ describe('Encrypt (#5) and result display (#6)', () => {
     assert.equal(s.original, 'xyz');
   });
 });
+
+describe('Decrypt enabled after encrypting (#7)', () => {
+  const encrypted = run(msg('Attack at dawn!'), key('LEMON'), ENCRYPT);
+
+  test('is enabled after a successful encrypt', () => {
+    assert.equal(encrypted.decryptEnabled, true);
+  });
+
+  for (const [name, action] of [['message', msg('changed')], ['key', key('OTHER')]]) {
+    test(`editing the ${name} disables Decrypt and resets Compare`, () => {
+      const decrypted = reduce(encrypted, DECRYPT);
+      const s = reduce({ ...decrypted, compareResult: 'match' }, action);
+      assert.equal(s.decryptEnabled, false);
+      assert.equal(s.compareVisible, false);
+      assert.equal(s.compareResult, null);
+      assert.equal(reduce(encrypted, action).decryptEnabled, false);
+    });
+  }
+
+  test('encrypting again re-enables Decrypt', () => {
+    const s = reduce(reduce(encrypted, msg('new')), ENCRYPT);
+    assert.equal(s.decryptEnabled, true);
+  });
+});
+
+describe('Decrypt (#8)', () => {
+  test('decrypts the reference vector back to plain text', () => {
+    assert.equal(run(msg('ATTACKATDAWN'), key('LEMON'), ENCRYPT, DECRYPT).result, 'ATTACKATDAWN');
+  });
+
+  test('round-trips mixed case and punctuation exactly', () => {
+    const text = 'Meet me @ 10:30, by the old Oak tree!';
+    assert.equal(run(msg(text), key('Zebra'), ENCRYPT, DECRYPT).result, text);
+  });
+
+  test('sets phase to decrypted and disables Decrypt again', () => {
+    const s = run(msg('hi'), key('LEMON'), ENCRYPT, DECRYPT);
+    assert.equal(s.phase, 'decrypted');
+    assert.equal(s.decryptEnabled, false);
+  });
+
+  test('a second DECRYPT is a no-op', () => {
+    const s = run(msg('hi'), key('LEMON'), ENCRYPT, DECRYPT);
+    assert.equal(reduce(s, DECRYPT), s);
+  });
+});
