@@ -7,7 +7,16 @@ export const ERRORS = Object.freeze({
   EMPTY_MESSAGE: 'Please enter a message to encrypt.',
   EMPTY_KEY: 'Please enter an encryption key.',
   INVALID_KEY: 'Key must contain letters only (A–Z).',
+  MISMATCH: (position) => `Messages differ at character ${position}.`,
 });
+
+function firstDifference(a, b) {
+  const length = Math.max(a.length, b.length);
+  for (let i = 0; i < length; i++) {
+    if (a[i] !== b[i]) return i;
+  }
+  return -1;
+}
 
 export const initialState = Object.freeze({
   message: '',
@@ -62,7 +71,15 @@ const handlers = {
       result: decrypt(state.result, state.key),
       phase: 'decrypted',
       decryptEnabled: false,
+      compareVisible: true,
     };
+  },
+
+  COMPARE: (state) => {
+    if (!state.compareVisible) return state;
+    const index = firstDifference(state.original, state.result);
+    if (index === -1) return { ...state, compareResult: 'match', error: null };
+    return { ...state, compareResult: 'mismatch', error: ERRORS.MISMATCH(index + 1) };
   },
 };
 
