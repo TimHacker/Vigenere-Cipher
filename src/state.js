@@ -1,7 +1,7 @@
 // Pure UI state reducer (ADR 0005). All UI behaviour lives here so it can be
 // unit tested without a DOM. State rules are described in ADR 0007.
 
-import { encrypt, isValidKey } from './vigenere.js';
+import { encrypt, decrypt, isValidKey } from './vigenere.js';
 
 export const ERRORS = Object.freeze({
   EMPTY_MESSAGE: 'Please enter a message to encrypt.',
@@ -28,9 +28,17 @@ function validate({ message, key }) {
   return null;
 }
 
+// Editing an input invalidates the current ciphertext (ADR 0007).
+const invalidate = {
+  error: null,
+  decryptEnabled: false,
+  compareVisible: false,
+  compareResult: null,
+};
+
 const handlers = {
-  MESSAGE_CHANGED: (state, { message }) => ({ ...state, message, error: null }),
-  KEY_CHANGED: (state, { key }) => ({ ...state, key, error: null }),
+  MESSAGE_CHANGED: (state, { message }) => ({ ...state, message, ...invalidate }),
+  KEY_CHANGED: (state, { key }) => ({ ...state, key, ...invalidate }),
 
   ENCRYPT: (state) => {
     const error = validate(state);
@@ -40,7 +48,20 @@ const handlers = {
       original: state.message,
       result: encrypt(state.message, state.key),
       phase: 'encrypted',
+      decryptEnabled: true,
+      compareVisible: false,
+      compareResult: null,
       error: null,
+    };
+  },
+
+  DECRYPT: (state) => {
+    if (!state.decryptEnabled) return state;
+    return {
+      ...state,
+      result: decrypt(state.result, state.key),
+      phase: 'decrypted',
+      decryptEnabled: false,
     };
   },
 };
